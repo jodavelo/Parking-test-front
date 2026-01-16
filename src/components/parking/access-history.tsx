@@ -5,34 +5,23 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Badge } from "@/components/ui/badge"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { LogIn, LogOut, AlertTriangle } from "lucide-react"
-
-interface AccessEvent {
-  id: string
-  licensePlate: string
-  userId: string
-  accessType: "entry" | "exit"
-  success: boolean
-  message: string
-  timestamp: string
-}
+import { getAuditLogs, AuditLog } from "@/lib/api/parking"
 
 interface AccessHistoryProps {
   refreshTrigger?: number
 }
 
 export function AccessHistory({ refreshTrigger }: AccessHistoryProps) {
-  const [events, setEvents] = useState<AccessEvent[]>([])
+  const [logs, setLogs] = useState<AuditLog[]>([])
   const [isLoading, setIsLoading] = useState(true)
 
   const fetchHistory = useCallback(async () => {
+    setIsLoading(true)
     try {
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/access/history`)
-      if (response.ok) {
-        const data = await response.json()
-        setEvents(data)
-      }
+      const data = await getAuditLogs(0, 50)
+      setLogs(data)
     } catch {
-      console.error("Error fetching history")
+      setLogs([])
     } finally {
       setIsLoading(false)
     }
@@ -54,11 +43,11 @@ export function AccessHistory({ refreshTrigger }: AccessHistoryProps) {
     })
   }
 
-  const getAccessIcon = (event: AccessEvent) => {
-    if (!event.success) {
+  const getAccessIcon = (log: AuditLog) => {
+    if (!log.success) {
       return <AlertTriangle className="w-5 h-5 text-red-500" />
     }
-    return event.accessType === "entry" ? (
+    return log.accessType === 0 ? (
       <LogIn className="w-5 h-5 text-green-500" />
     ) : (
       <LogOut className="w-5 h-5 text-blue-500" />
@@ -76,39 +65,39 @@ export function AccessHistory({ refreshTrigger }: AccessHistoryProps) {
           <div className="flex items-center justify-center py-8">
             <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
           </div>
-        ) : events.length === 0 ? (
+        ) : logs.length === 0 ? (
           <div className="text-center py-8 text-muted-foreground">
             No hay registros de acceso
           </div>
         ) : (
           <ScrollArea className="h-[400px] pr-4">
             <div className="space-y-3">
-              {events.map((event) => (
+              {logs.map((log) => (
                 <div
-                  key={event.id}
+                  key={log.id}
                   className={`p-4 rounded-lg border ${
-                    event.success 
+                    log.success 
                       ? "bg-card" 
                       : "bg-red-500/5 border-red-500/20"
                   }`}
                 >
                   <div className="flex items-start gap-3">
-                    <div className="mt-0.5">{getAccessIcon(event)}</div>
+                    <div className="mt-0.5">{getAccessIcon(log)}</div>
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2 flex-wrap">
-                        <span className="font-semibold">{event.licensePlate}</span>
-                        <Badge variant={event.accessType === "entry" ? "default" : "secondary"}>
-                          {event.accessType === "entry" ? "Entrada" : "Salida"}
+                        <span className="font-semibold">{log.vehiclePlate}</span>
+                        <Badge variant={log.accessType === 0 ? "default" : "secondary"}>
+                          {log.accessType === 0 ? "Entrada" : "Salida"}
                         </Badge>
-                        <Badge variant={event.success ? "outline" : "destructive"}>
-                          {event.success ? "Exitoso" : "Denegado"}
+                        <Badge variant={log.success ? "outline" : "destructive"}>
+                          {log.success ? "Exitoso" : "Denegado"}
                         </Badge>
                       </div>
-                      {!event.success && event.message && (
-                        <p className="text-sm text-red-500 mt-1">{event.message}</p>
+                      {!log.success && log.failureReason && (
+                        <p className="text-sm text-red-500 mt-1">{log.failureReason}</p>
                       )}
                       <p className="text-sm text-muted-foreground mt-1">
-                        Usuario: {event.userId} • {formatDateTime(event.timestamp)}
+                        Usuario: {log.userId} • {formatDateTime(log.timestamp)}
                       </p>
                     </div>
                   </div>
