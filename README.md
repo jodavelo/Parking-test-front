@@ -31,7 +31,7 @@ cp .env.example .env.local
 ```
 
 Variables de entorno:
-- `NEXT_PUBLIC_API_URL`: URL base de la API backend (ejemplo: `http://localhost:5000`)
+- `NEXT_PUBLIC_API_URL`: URL base de la API backend (ejemplo: `http://localhost:5206`)
 
 ## Ejecución
 
