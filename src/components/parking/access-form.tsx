@@ -7,24 +7,20 @@ import { Label } from "@/components/ui/label"
 import { Button } from "@/components/ui/button"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { LogIn, LogOut, AlertCircle, CheckCircle2 } from "lucide-react"
+import { registerAccess, ApiError } from "@/lib/api/parking"
 
 interface AccessFormProps {
   onAccessRegistered?: () => void
 }
 
-interface ApiResponse {
-  success: boolean
-  message: string
-}
-
 export function AccessForm({ onAccessRegistered }: AccessFormProps) {
-  const [licensePlate, setLicensePlate] = useState("")
+  const [vehiclePlate, setVehiclePlate] = useState("")
   const [userId, setUserId] = useState("")
   const [isLoading, setIsLoading] = useState(false)
   const [message, setMessage] = useState<{ type: "success" | "error"; text: string } | null>(null)
 
-  const handleAccess = async (accessType: "entry" | "exit") => {
-    if (!licensePlate.trim() || !userId.trim()) {
+  const handleAccess = async (accessType: 0 | 1) => {
+    if (!vehiclePlate.trim() || !userId.trim()) {
       setMessage({ type: "error", text: "Debe ingresar la placa del vehículo y el ID de usuario" })
       return
     }
@@ -33,30 +29,26 @@ export function AccessForm({ onAccessRegistered }: AccessFormProps) {
     setMessage(null)
 
     try {
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/access`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          licensePlate: licensePlate.trim().toUpperCase(),
-          userId: userId.trim(),
-          accessType: accessType === "entry" ? 0 : 1,
-        }),
+      const result = await registerAccess({
+        vehiclePlate: vehiclePlate.trim().toUpperCase(),
+        userId: userId.trim(),
+        accessType,
+        timestamp: new Date().toISOString(),
       })
 
-      const data: ApiResponse = await response.json()
-
-      if (response.ok && data.success) {
-        setMessage({ type: "success", text: data.message || `${accessType === "entry" ? "Entrada" : "Salida"} registrada correctamente` })
-        setLicensePlate("")
-        setUserId("")
-        onAccessRegistered?.()
-      } else {
-        setMessage({ type: "error", text: data.message || "Error al procesar la solicitud" })
-      }
-    } catch {
-      setMessage({ type: "error", text: "Error de conexión con el servidor" })
+      setMessage({ 
+        type: "success", 
+        text: result.message || `${accessType === 0 ? "Entrada" : "Salida"} registrada correctamente` 
+      })
+      setVehiclePlate("")
+      setUserId("")
+      onAccessRegistered?.()
+    } catch (error) {
+      const apiError = error as ApiError
+      setMessage({ 
+        type: "error", 
+        text: apiError.error || "Error de conexión con el servidor" 
+      })
     } finally {
       setIsLoading(false)
     }
@@ -70,12 +62,12 @@ export function AccessForm({ onAccessRegistered }: AccessFormProps) {
       </CardHeader>
       <CardContent className="space-y-4">
         <div className="space-y-2">
-          <Label htmlFor="licensePlate">Placa del Vehículo</Label>
+          <Label htmlFor="vehiclePlate">Placa del Vehículo</Label>
           <Input
-            id="licensePlate"
-            placeholder="ABC-123"
-            value={licensePlate}
-            onChange={(e) => setLicensePlate(e.target.value.toUpperCase())}
+            id="vehiclePlate"
+            placeholder="ABC123"
+            value={vehiclePlate}
+            onChange={(e) => setVehiclePlate(e.target.value.toUpperCase())}
             disabled={isLoading}
           />
         </div>
@@ -83,7 +75,7 @@ export function AccessForm({ onAccessRegistered }: AccessFormProps) {
           <Label htmlFor="userId">ID de Usuario</Label>
           <Input
             id="userId"
-            placeholder="USR001"
+            placeholder="3fa85f64-5717-4562-b3fc-2c963f66afa6"
             value={userId}
             onChange={(e) => setUserId(e.target.value)}
             disabled={isLoading}
@@ -105,7 +97,7 @@ export function AccessForm({ onAccessRegistered }: AccessFormProps) {
 
         <div className="flex gap-2">
           <Button
-            onClick={() => handleAccess("entry")}
+            onClick={() => handleAccess(0)}
             disabled={isLoading}
             className="flex-1 bg-green-600 hover:bg-green-700"
           >
@@ -113,7 +105,7 @@ export function AccessForm({ onAccessRegistered }: AccessFormProps) {
             Entrada
           </Button>
           <Button
-            onClick={() => handleAccess("exit")}
+            onClick={() => handleAccess(1)}
             disabled={isLoading}
             variant="outline"
             className="flex-1 text-red-500 border-red-500 hover:bg-red-500/10"
