@@ -22,8 +22,9 @@ export function VehicleStatus({ refreshTrigger }: VehicleStatusProps) {
   const [isLoading, setIsLoading] = useState(false)
   const [searchResult, setSearchResult] = useState<SearchResult>({ vehicle: null, error: null })
   const [recentSearches, setRecentSearches] = useState<VehicleStatusType[]>([])
+  const [lastSearchedPlate, setLastSearchedPlate] = useState<string | null>(null)
 
-  const searchVehicle = useCallback(async (plate: string) => {
+  const searchVehicle = useCallback(async (plate: string, updateRecent = true) => {
     if (!plate.trim()) return
 
     setIsLoading(true)
@@ -32,11 +33,18 @@ export function VehicleStatus({ refreshTrigger }: VehicleStatusProps) {
     try {
       const vehicle = await getVehicleStatus(plate.trim().toUpperCase())
       setSearchResult({ vehicle, error: null })
+      setLastSearchedPlate(vehicle.plate)
       
-      setRecentSearches((prev) => {
-        const filtered = prev.filter((v) => v.plate !== vehicle.plate)
-        return [vehicle, ...filtered].slice(0, 5)
-      })
+      if (updateRecent) {
+        setRecentSearches((prev) => {
+          const filtered = prev.filter((v) => v.plate !== vehicle.plate)
+          return [vehicle, ...filtered].slice(0, 5)
+        })
+      } else {
+        setRecentSearches((prev) => 
+          prev.map((v) => v.plate === vehicle.plate ? vehicle : v)
+        )
+      }
     } catch (error) {
       const apiError = error as ApiError
       setSearchResult({ 
@@ -49,10 +57,10 @@ export function VehicleStatus({ refreshTrigger }: VehicleStatusProps) {
   }, [])
 
   useEffect(() => {
-    if (searchResult.vehicle && refreshTrigger) {
-      searchVehicle(searchResult.vehicle.plate)
+    if (lastSearchedPlate && refreshTrigger && refreshTrigger > 0) {
+      searchVehicle(lastSearchedPlate, false)
     }
-  }, [refreshTrigger, searchResult.vehicle, searchVehicle])
+  }, [refreshTrigger, lastSearchedPlate, searchVehicle])
 
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault()
