@@ -2,6 +2,20 @@
 
 Sistema de gestión vehicular para control de entrada y salida de vehículos.
 
+## Capturas de Pantalla
+
+### Vista Principal
+![Vista Principal](docs/home1.jpg)
+
+### Registro de Acceso
+![Registro de Acceso](docs/home2.jpg)
+
+### Estado de Vehículos
+![Estado de Vehículos](docs/home3.jpg)
+
+### Historial de Accesos
+![Historial de Accesos](docs/home4.jpg)
+
 ## Tecnologías
 
 - **Framework**: Next.js 16 con App Router
